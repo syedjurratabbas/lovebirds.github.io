@@ -63,7 +63,7 @@
             align-items: center;
             justify-content: center;
             transform-style: preserve-3d;
-            overflow: hidden;
+            overflow: hidden; /* Kept for other screens, but No button will escape this */
         }
 
         /* Progress Bar for the 'Story' mode */
@@ -366,23 +366,30 @@
         ];
 
         function moveNoBtn() {
-            // Get viewport dimensions
-            const cardRect = document.querySelector('.card').getBoundingClientRect();
-            
-            // Allow button to fly anywhere on screen
-            const maxX = window.innerWidth - noBtn.offsetWidth - 20;
-            const maxY = window.innerHeight - noBtn.offsetHeight - 20;
-            
-            noBtn.style.position = 'fixed';
-            noBtn.style.zIndex = '1000'; // Above everything
+            // CRITICAL FIX: The card has 3D transform which traps fixed position elements.
+            // We must move the button to the body to let it fly freely on the whole screen.
+            if (noBtn.parentNode !== document.body) {
+                const rect = noBtn.getBoundingClientRect();
+                noBtn.style.position = 'fixed';
+                noBtn.style.left = rect.left + 'px';
+                noBtn.style.top = rect.top + 'px';
+                noBtn.style.width = rect.width + 'px'; // Prevent it from shrinking
+                noBtn.style.zIndex = '1000'; 
+                document.body.appendChild(noBtn);
+            }
 
-            const randomX = Math.random() * maxX;
-            const randomY = Math.random() * maxY;
+            // Get viewport dimensions
+            const padding = 20;
+            const maxX = window.innerWidth - noBtn.offsetWidth - padding;
+            const maxY = window.innerHeight - noBtn.offsetHeight - padding;
+            
+            const randomX = Math.max(padding, Math.random() * maxX);
+            const randomY = Math.max(padding, Math.random() * maxY);
 
             gsap.to(noBtn, {
                 left: randomX,
                 top: randomY,
-                duration: 0.3,
+                duration: 0.5, // Slower duration so it's visible moving
                 ease: "power2.out",
                 rotation: Math.random() * 30 - 15
             });
@@ -427,6 +434,11 @@
 
         // --- The "Yes" Logic (Dynamic Banter) ---
         function acceptProposal() {
+            // Clean up the rogue button if it's on the body
+            if (noBtn.parentNode === document.body) {
+                noBtn.remove();
+            }
+
             const title = document.getElementById('success-title');
             const msg = document.getElementById('success-message');
             const finalImg = document.querySelector('.polaroid img');
